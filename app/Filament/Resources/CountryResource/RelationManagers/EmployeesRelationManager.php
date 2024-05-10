@@ -1,36 +1,25 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\Resources\CountryResource\RelationManagers;
 
-use App\Filament\Resources\EmployeeResource\Pages;
-use App\Filament\Resources\EmployeeResource\RelationManagers;
 use App\Models\City;
-use App\Models\Employee;
 use App\Models\State;
 use Filament\Forms;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Get;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Forms\Set;
-use Filament\Resources\Resource;
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
-use Filament\Tables\Enums\FiltersLayout;
-use Filament\Tables\Filters\Filter;
-use Filament\Tables\Filters\Indicator;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
-class EmployeeResource extends Resource
+class EmployeesRelationManager extends RelationManager
 {
-    protected static ?string $model = Employee::class;
+    protected static string $relationship = 'employees';
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-
-    public static function form(Form $form): Form
+    public function form(Form $form): Form
     {
         return $form
             ->schema([
@@ -104,9 +93,10 @@ class EmployeeResource extends Resource
             ])->columns(3);
     }
 
-    public static function table(Table $table): Table
+    public function table(Table $table): Table
     {
         return $table
+            ->recordTitleAttribute('first_name')
             ->columns([
                 Tables\Columns\TextColumn::make('first_name')
                     ->searchable()
@@ -156,67 +146,19 @@ class EmployeeResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('Department')
-                    ->relationship('department', 'name')
-                    ->native(false)
-                    ->searchable()
-                    ->preload()
-                    ->label('Filter by Department')
-                    ->indicator('Department'),
-                Filter::make('created_at')
-                    ->form([
-                        DatePicker::make('created_from')->native(false),
-                        DatePicker::make('created_until')->native(false),
-                    ])
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query
-                            ->when(
-                                $data['created_from'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
-                            )
-                            ->when(
-                                $data['created_until'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
-                            );
-                    })
-                    ->indicateUsing(function (array $data): array {
-                        $indicators = [];
-                        if ($data['created_from'] ?? null) {
-                            $indicators[] = Indicator::make('Created from ' . Carbon::parse($data['created_from'])->toFormattedDateString())
-                                ->removeField('created_from');
-                        }
-                        if ($data['created_until'] ?? null) {
-                            $indicators[] = Indicator::make('Created until ' . Carbon::parse($data['created_until'])->toFormattedDateString())
-                                ->removeField('created_until');
-                        }
-
-                        return $indicators;
-                    })->columnSpan(2)->columns(2),
-            ], layout: FiltersLayout::AboveContent)->filtersFormColumns(3)
+                //
+            ])
+            ->headerActions([
+                Tables\Actions\CreateAction::make(),
+            ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
-    }
-
-    public static function getPages(): array
-    {
-        return [
-            'index' => Pages\ListEmployees::route('/'),
-            'create' => Pages\CreateEmployee::route('/create'),
-            'edit' => Pages\EditEmployee::route('/{record}/edit'),
-        ];
     }
 }
